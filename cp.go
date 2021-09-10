@@ -12,7 +12,6 @@ func main() {
 	source := os.Args[1]
 	destination := os.Args[2]
 
-
 	err := filepath.Walk(source, walkFunc(source, destination))
 	if err != nil {
 		fmt.Printf("%s\n", err)
@@ -29,7 +28,7 @@ func walkFunc(source, destination string) filepath.WalkFunc {
 		}
 
 		if fileInfo.IsDir() {
-			return os.MkdirAll(dest, 0777)
+			return os.MkdirAll(dest, fileInfo.Mode())
 		} else {
 			return copy(path, dest, 1024)
 		}
@@ -46,8 +45,19 @@ func copy(source, destination string, bufferSize int) error {
 		return err
 	}
 	defer sourceFile.Close()
+	sourceStat, err := os.Stat(source)
+
+	if err != nil {
+		return err
+	}
 
 	destinationFile, err := os.Create(destination)
+
+	if err != nil {
+		return err
+	}
+
+	err = os.Chmod(destination, sourceStat.Mode())
 
 	if err != nil {
 		return err
