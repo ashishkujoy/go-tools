@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/ashishkujoy/go-tools/utils"
 	"os"
+	"regexp"
 	"sync"
 )
 
@@ -13,12 +14,14 @@ func main() {
 	wordToCount := flag.String("w", "", "word to count")
 	flag.Parse()
 	filePaths := flag.Args()[:]
-	println(len(filePaths))
 	wordCountInputChannel := make(chan int)
 	wordCountOutputChannel := make(chan int)
 	var waitGroup sync.WaitGroup
 
 	waitGroup.Add(len(filePaths) + 1)
+
+	regexpToMatch, err := regexp.Compile(*wordToCount)
+	utils.ExitIfErrNotNil(err)
 
 	go func() {
 		count := add(wordCountOutputChannel)
@@ -28,7 +31,7 @@ func main() {
 
 	for _, filePath := range filePaths {
 		go func(filePath string) {
-			wordCountInputChannel <- countWordOccurrence(filePath, *wordToCount)
+			wordCountInputChannel <- countWordOccurrence(filePath, regexpToMatch)
 			waitGroup.Done()
 		}(filePath)
 	}
@@ -39,7 +42,7 @@ func main() {
 	waitGroup.Wait()
 }
 
-func countWordOccurrence(filePath, word string) int {
+func countWordOccurrence(filePath string, word *regexp.Regexp) int {
 	wordCount := 0
 	file, err := os.Open(filePath)
 
@@ -47,7 +50,7 @@ func countWordOccurrence(filePath, word string) int {
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanWords)
 	for scanner.Scan() {
-		if scanner.Text() == word {
+		if word.MatchString(scanner.Text()) {
 			wordCount++
 		}
 	}
